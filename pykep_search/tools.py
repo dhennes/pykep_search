@@ -38,10 +38,10 @@ def lambert_leg(p1, p2, t0, tof, vrel=None, dv_launch=0., rendezvous=False):
     dV, vrel_out, where vrel_out is the relative velocity at the end of the leg at p2
     """
     # check if planets are names or planet objects
-    if type(p1) is str:
-        p1 = PLANETS[p1]
-    if type(p2) is str:
-        p2 = PLANETS[p2]
+    if not isinstance(p1, kep.planet):
+        p1 = PLANETS[str(p1)]
+    if not isinstance(p2, kep.planet):
+        p2 = PLANETS[str(p2)]
     r1, v1 = p1.eph(kep.epoch(t0))
     r2, v2 = p2.eph(kep.epoch(t0 + tof))
     lambert = kep.lambert_problem(r1, r2, tof * kep.DAY2SEC, p1.mu_central_body, False, 1)

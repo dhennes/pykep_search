@@ -36,8 +36,8 @@ T0 = (-1000., 0.) # launch window
 T_MIN = T0[0]
 T_MAX = T0[-1] + 6000.
 
-T_RES = 60
-T_RES = 16
+#T_RES = 60
+T_RES = 10
 T_SCALE = {name: np.arange(T_MIN, T_MAX, tools.PLANETS[name].period/kep.DAY2SEC/T_RES) for name in PLANET_NAMES}
 
 MAX_EPOCH = T_SCALE['saturn'][-2]
@@ -68,6 +68,8 @@ class State():
         
 
     def moves(self):
+        if self.isterminal():
+            return []
         if self.next_move is MOVE_TYPE.TOF:
             min_tof, max_tof = PLANET_TOF[self.seq[-2], self.seq[-1]]
             cur_t = self.t0 + sum(self.tof)
@@ -124,13 +126,11 @@ class State():
             
             
     def isterminal(self):
-        if len(self.tof) > 6:
+        if len(self.tof) == 5:
             return True
         if self.dv is not None and self.dv > 10000:
             return True
         if self.t0 is not None and self.t0 + sum(self.tof) > MAX_EPOCH:
-            return True
-        if self.moves() == []:
             return True
         if self.isfinal():
             return True
@@ -146,8 +146,7 @@ class State():
 
         
     def copy(self):
-        return copy.deepcopy(self)
-      
+        return State(seq=self.seq, t0=self.t0, tof=self.tof, vrel=self.vrel, dv=self.dv, next_move=self.next_move)
 
     def __key(self):
         return (self.seq, self.t0, self.tof)
@@ -164,7 +163,8 @@ class State():
     def __repr__(self):
         s = '{:8.2f} m/s  '.format(self.dv)
         s += '{:7.2f} days  '.format(sum(self.tof))
-        s += '{:8.2f} mjd2000  '.format(self.t0)
+        if self.t0 is not None:
+            s += '{:8.2f} mjd2000  '.format(self.t0)
         s += '-'.join([p[0] for p in self.seq]) + '  '
         s += '[' + ', '.join(['{:.2f}'.format(t) for t in self.tof]) + ']'
         return s

@@ -6,7 +6,7 @@ import random
 import numpy as np
 import functools
 
-from pykep_search.state_eph_grid import State
+from pykep_search.state_eph_grid import State, MOVE_TYPE
 from pykep_search.tools import pretty_time
 
 
@@ -23,7 +23,8 @@ class Node:
         self.parent = parent
         self.children = []
         self.last_move = last_move
-
+        self.state = state.copy()
+        
 
     def update(self, value, N=1, i=0):
         self.n += 1
@@ -46,9 +47,9 @@ class Node:
     def select(self):
         # normal UCB1
         #return sorted(self.children, key=lambda n: n.B)[-1] # return child with highest value
-        return self.children[np.argmax([c.B for c in self.children])]
+        #return self.children[np.argmax([c.B for c in self.children])]
 
-        #return random.choice(self.children)
+        return random.choice(self.children)
         
         # # boltzmann selection
         #e = np.exp([c.Q/c.n for c in self.children])
@@ -83,54 +84,69 @@ def uct():
     
     while n_rollouts < N+1:
         n_rollouts += 1
-        state = rootstate.copy()
+        #state = rootstate.copy()
         node = root
 
         # select
         select_depth = 0
         while node.untried_moves == [] and node.children != []:
             node = node.select()
-            state.move(node.last_move)
+            #state.move(node.last_move) # this is expansive!
+            #state = node.state
+
             select_depth += 1
 
         max_select_depth = max(max_select_depth, select_depth)
 
         # expand
-        if node.untried_moves != [] and not state.isterminal():
+        while node.untried_moves != []:
             move = random.choice(node.untried_moves)
+            if node.state.next_move == MOVE_TYPE.TOF:
+                n_legs += 1
+            state = node.state.copy()
             state.move(move)
             node = node.expand(state, move)
 
-        # check if leaf
-        if not node == root and (state.isterminal() or node.children == [] and node.untried_moves == []):
-            # detach child
-            node.parent.children.remove(node)
+#        # check if leaf
+#        if state.isterminal() or node.children == [] and node.untried_moves == []:
+#            if node == root:
+#                # finish search
+#                break
+#                
+#            # detach child
+#            node.parent.children.remove(node)
             
-        # rollout
-        while not state.isterminal():
-            state.random_move()
+#        # rollout
+#        while not state.isterminal():
+#            if state.next_move == MOVE_TYPE.TOF:
+#                n_legs += 1
+#            state.random_move()
 
         # backpropagate
         value = 0
-        if state.isfinal() and state.dv == state.dv: # TODO check why dv would be NaN?
+        if node.state.isfinal() and node.state.dv == node.state.dv: # TODO check why dv would be NaN?
             #print score, value            
             #value = max(MAX_DV - state.dv - 2000. * len(state.tof), 0.) / MAX_DV
-            value = max(MAX_DV - state.dv, 0.)/ MAX_DV
-            
-        while node is not None:
-            node.update(value) #, N=N, i=n_rollouts)
-            node = node.parent
+            value = max(MAX_DV - node.state.dv, 0.)/ MAX_DV
 
-
-        n_legs += len(state.tof)
-        
-        if state.isfinal():
+        if node.state.isfinal():
             if best is None or state.dv is not None and state.dv < best:
                 best = state.dv
                 print '\r%s' % str(state).ljust(80), 
                 print
                 sys.stdout.flush()
-
+            
+        done = False
+        while node is not None:
+            #node.update(value) #, N=N, i=n_rollouts)
+            if node.children == [] and node.untried_moves == []:
+                if node == root:
+                    done = True
+                    break
+                node.parent.children.remove(node)
+            node = node.parent
+        if done:
+            break
 
         if n_rollouts % 100 == 0:
             print '\r{0:,d} rollouts  {1:,d} legs  {2:.0f} legs/s  {3} {4} {5}'.format(n_rollouts, n_legs,
@@ -138,7 +154,7 @@ def uct():
                                                                                    pretty_time(time.time() - start),
                                                                                    traverse(root),
                                                                                    max_select_depth
-            ),
+            ).ljust(100),
             #print '\r%d %d %d' % (n_rollouts, len(root.children), len(root.untried_moves)), 
             sys.stdout.flush()
 
@@ -147,11 +163,20 @@ def uct():
 #            print ' '.join(['%s: %.4f' % (c.last_move, c.Q/c.n) for c in root.children[0].children])
 #            sys.stdout.flush()
             
-    print
+    print '\r{0:,d} rollouts  {1:,d} legs  {2:.0f} legs/s  {3}'.format(n_rollouts, n_legs,
+                                                                               n_legs / (time.time() - start),
+                                                                               pretty_time(time.time() - start),
+                                                                               traverse(root),
+                                                                               max_select_depth
+    ).ljust(100)
     return root
 
 if __name__=='__main__':
-    root = uct()
+#    uct()
+    
+
+    import cProfile
+    cProfile.run('uct()')
 
 
     # import networkx as nx
