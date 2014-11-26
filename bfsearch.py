@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from pykep_search.state_eph_grid import State, MOVE_TYPE
+#from pykep_search.state_eph_grid import State, MOVE_TYPE
+from pykep_search.state_rosetta import State, MOVE_TYPE
 import sys
 
 
@@ -10,8 +11,8 @@ def bf_search(root):
     legs = 0
     while not states == []:
         frontier = []
-        for s in states:
-            for move in s.moves():
+        for s in sorted(states, key=lambda x: x.dv): # TODO: test with random permutation here 
+            for move in s.moves(): # TODO: here as well
                 ns = s.copy()
                 if ns.next_move == MOVE_TYPE.TOF:
                     legs += 1
@@ -35,7 +36,7 @@ def bf_search(root):
 
 
 if __name__ == '__main__':
-    # bf_search(State())
+    bf_search(State())
     
-    import cProfile
-    cProfile.run('bf_search(State())')
+    # import cProfile
+    # cProfile.run('bf_search(State())')

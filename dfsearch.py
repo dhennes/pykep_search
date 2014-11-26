@@ -3,7 +3,8 @@
 import sys
 import numpy as np
 
-from pykep_search.state_eph_grid import State, MOVE_TYPE
+#from pykep_search.state_eph_grid import set_t_res, fix_first_move, State, MOVE_TYPE
+from pykep_search.state_rosetta import set_t_res, fix_first_move, State, MOVE_TYPE
 
 
 LEGS = 0
@@ -38,6 +39,23 @@ def df_search(state):
 
 
 if __name__ == '__main__':
-    state = State()
-    df_search(state)
-    print '\r', LEGS
+    X = [2**t for t in range(2, 6)]
+    Y = []
+    F = []
+    for x in X:
+        BEST = None
+        set_t_res(x)
+        fix_first_move(False)
+        state = State()    
+        df_search(state)
+        print '\r> ', x, LEGS
+        Y.append(LEGS)
+        F.append(BEST.dv)
+        print 'X = %s\nY = %s\nF = %s' % (str(X), str(Y), str(F))
+                
+    import matplotlib.pylab as plt
+    plt.plot(X, Y)
+    plt.xlabel('grid resolution')
+    plt.ylabel('log(legs)')
+    plt.gca().set_yscale('log')
+    plt.show()

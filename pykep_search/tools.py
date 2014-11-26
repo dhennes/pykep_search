@@ -44,7 +44,7 @@ def lambert_leg(p1, p2, t0, tof, vrel=None, dv_launch=0., rendezvous=False):
         p2 = PLANETS[str(p2)]
     r1, v1 = p1.eph(kep.epoch(t0))
     r2, v2 = p2.eph(kep.epoch(t0 + tof))
-    lambert = kep.lambert_problem(r1, r2, tof * kep.DAY2SEC, p1.mu_central_body, False, 1)
+    lambert = kep.lambert_problem(r1, r2, tof * kep.DAY2SEC, p1.mu_central_body, False, 0)
     vrel_in = np.array(lambert.get_v1()[0]) - np.array(v1)
     vrel_out = np.array(lambert.get_v2()[0]) - np.array(v2)
 

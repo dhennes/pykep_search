@@ -6,14 +6,26 @@ import random
 import numpy as np
 import functools
 import bisect
+import math
 
-#from pykep_search.state_eph_grid import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
-from pykep_search.state_rosetta import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
+from pykep_search.state_eph_grid import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
+#from pykep_search.state_rosetta import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
 from pykep_search.tools import pretty_time
 
 
 UCT_C = .1
 MAX_DV = 20000 #100000
+
+
+def ucb1tuned(child):
+    node = child.parent
+    log_frac = math.log(node.n) / float(child.n)
+    if child.n > 1:
+        V = child.S / float(child.n-1) + math.sqrt(2 * log_frac)
+    else:
+        V = math.sqrt(2 * log_frac)
+    return node.V + math.sqrt(log_frac * min(0.25, V))
+
 
 class Node:
     def __init__(self, parent=None, state=None, last_move=None, c_P=0.0007):
@@ -27,58 +39,33 @@ class Node:
         self.last_move = last_move
         self.state = state.copy()
         self.c_P = c_P
+        self.M = None # mean
+        self.S = None # variance
         
 
     def update(self, value, N=1, i=0):
         self.n += 1
-        #if self.parent is not None:
-            #self.Q += value #1./self.n * (value - self.Q) # TODO: check this
-            #self.B = self.Q/self.n + 0.7 * 0.01 * self.parent.n / self.n
-            #self.B = self.Q/self.n + 2 * UCT_C * (N-i)/(1. * N) * np.sqrt(2*np.log(self.parent.n + 1)/self.n)
-
-            #self.Q += value
-            #self.V = self.Q * 1. / self.n 
-            
         self.V = max(self.V, value)
-
-            #self.B = self.V + 0.7 * 0.01 * self.parent.n / self.n
-            #self.B = self.V + 2 * UCT_C * np.sqrt(2*np.log(self.parent.n+1)/self.n)
-    
-        #if self.parent is not None:
-        #    self.parent.children.sort()
+        if self.M is None:
+            self.M = value
+            self.S = 0
+        else:
+            last_M = self.M
+            self.M = self.M + (value - self.M) / (1. * self.n)
+            self.S = self.S + (value - last_M) * (value - self.M) # variance is sigma**2 = self.S / (self.n-1)
+            
             
     def expand(self, state, move):
         n = Node(parent=self, state=state, last_move=move, c_P=self.c_P)
         self.untried_moves.remove(move)
         self.children.append(n)
-        #bisect.insort(self.children, n)
         return n
 
 
     def select(self):
-        # normal UCB1
-        #return sorted(self.children)[-1]
-        #return self.children[np.argmax([c.B for c in self.children])]
-
-        #for c in self.children:
-        #    c.B = c.V + 0.7 * 0.01 * self.n/c.n
-        #    #c.B = c.V + 2 * UCT_C * np.sqrt(2*np.log(self.n/c.n))
-
-        #self.children.sort(key=lambda c: c.V + self.c_P * np.sqrt(np.log(self.n/c.n))) 
-        self.children.sort(key=lambda c: c.V + self.c_P * self.n/c.n)
+        self.children.sort(key=ucb1tuned) 
         return self.children[-1]
-
-        #return random.choice(self.children)
         
-        # # boltzmann selection
-        #e = np.exp([c.Q/c.n for c in self.children])
-        #return self.children[np.searchsorted(np.cumsum(e/sum(e)), np.random.uniform())]
-
-        
-
-        
-        
-
 def traverse(node):
     if node.children == []:
         return 1
@@ -203,38 +190,8 @@ def uct(N=100000, c_P=0.0007, verbose=True):
     return best, best_n_legs
 
 
-def uct_run(i, N=20000):
-    return uct(N=N, verbose=False)
-
-    
 if __name__=='__main__':
     # define problem
     set_t_res(32)
-    fix_first_move(False)
-
-    uct(N=1e10, c_P=0.015, verbose=True)
-
-    # import cProfile
-    # cProfile.run('uct()')
-
-
-    # import networkx as nx
-    # import matplotlib.pylab as plt
-
-    # try:
-    #     from networkx import graphviz_layout
-    # except ImportError:
-    #         raise ImportError("This example needs Graphviz and either PyGraphviz or Pydot")
-
-    # G = nx.Graph()
-    # nodes = []
-    # collect(nodes, root)
-    # print len(nodes)
-    # G.add_nodes_from(nodes)
-    # for i, n in enumerate(nodes):
-    #     G.add_edges_from([(i, nodes.index(c)) for c in n.children])
-
-
-    # pos=nx.graphviz_layout(G,prog='twopi',args='')
-    # nx.draw(G,pos,node_size=20,alpha=0.5,node_color="blue", with_labels=False)
-    # plt.show()
+    fix_first_move(True)
+    uct(N=50000, verbose=True)

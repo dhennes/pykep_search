@@ -7,12 +7,11 @@ import numpy as np
 import functools
 import bisect
 
-#from pykep_search.state_eph_grid import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
-from pykep_search.state_rosetta import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
+from pykep_search.state_eph_grid import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
 from pykep_search.tools import pretty_time
 
 
-UCT_C = .1
+UCT_C = .19
 MAX_DV = 20000 #100000
 
 class Node:
@@ -31,7 +30,7 @@ class Node:
 
     def update(self, value, N=1, i=0):
         self.n += 1
-        #if self.parent is not None:
+        if self.parent is not None:
             #self.Q += value #1./self.n * (value - self.Q) # TODO: check this
             #self.B = self.Q/self.n + 0.7 * 0.01 * self.parent.n / self.n
             #self.B = self.Q/self.n + 2 * UCT_C * (N-i)/(1. * N) * np.sqrt(2*np.log(self.parent.n + 1)/self.n)
@@ -39,7 +38,7 @@ class Node:
             #self.Q += value
             #self.V = self.Q * 1. / self.n 
             
-        self.V = max(self.V, value)
+            self.V = max(self.V, value)
 
             #self.B = self.V + 0.7 * 0.01 * self.parent.n / self.n
             #self.B = self.V + 2 * UCT_C * np.sqrt(2*np.log(self.parent.n+1)/self.n)
@@ -64,8 +63,8 @@ class Node:
         #    c.B = c.V + 0.7 * 0.01 * self.n/c.n
         #    #c.B = c.V + 2 * UCT_C * np.sqrt(2*np.log(self.n/c.n))
 
-        #self.children.sort(key=lambda c: c.V + self.c_P * np.sqrt(np.log(self.n/c.n))) 
-        self.children.sort(key=lambda c: c.V + self.c_P * self.n/c.n)
+        self.children.sort(key=lambda c: c.V + self.c_P * np.sqrt(np.log(self.n/c.n))) 
+        #self.children.sort(key=lambda c: c.V + self.c_P * self.n/c.n)
         return self.children[-1]
 
         #return random.choice(self.children)
@@ -209,10 +208,18 @@ def uct_run(i, N=20000):
     
 if __name__=='__main__':
     # define problem
-    set_t_res(32)
-    fix_first_move(False)
+    set_t_res(36)
+    fix_first_move(True)
 
-    uct(N=1e10, c_P=0.015, verbose=True)
+    from multiprocessing import Pool
+    from functools import partial
+    
+    pool = Pool(32)
+    res = pool.map(partial(uct_run, N=20000), xrange(100))
+
+    import matplotlib.pylab as plt
+    plt.scatter(xrange(1, len(res)+1), sorted(res))
+    plt.show()
 
     # import cProfile
     # cProfile.run('uct()')

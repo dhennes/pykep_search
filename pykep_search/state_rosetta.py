@@ -9,32 +9,60 @@ import tools
 
 PLANET_TOF = {}
 PLANET_TOF[('earth', 'venus')] = (30., 400.)
-PLANET_TOF[('earth', 'earth')] = (365.25, 800.)
-PLANET_TOF[('earth', 'mars')] = (100., 500.)
+PLANET_TOF[('earth', 'earth')] = (340., 800.)
+PLANET_TOF[('earth', 'mars')] = (100., 1000.)
 PLANET_TOF[('earth', 'jupiter')] = (400., 1600.)
-PLANET_TOF[('earth', 'saturn')] = (1200., 2500.)
+#PLANET_TOF[('earth', 'saturn')] = (1200., 2500.)
+PLANET_TOF[('earth', '67p')] = (500., 3000.)
+
 
 PLANET_TOF[('venus', 'venus')] = (224.7, 450.)
 PLANET_TOF[('venus', 'mars')] = (100., 600.)
 PLANET_TOF[('venus', 'jupiter')] = (400., 1600.)
-PLANET_TOF[('venus', 'saturn')] = (1200., 2500.)
+#PLANET_TOF[('venus', 'saturn')] = (1200., 2500.)
+PLANET_TOF[('venus', '67p')] = (500., 3000.)
 
 PLANET_TOF[('mars', 'mars')] = (780., 1600.)
 PLANET_TOF[('mars', 'jupiter')] = (400., 1600.)
-PLANET_TOF[('mars', 'saturn')] = (1200., 2500.)
+#PLANET_TOF[('mars', 'saturn')] = (1200., 2500.)
+PLANET_TOF[('mars', '67p')] = (500., 3000.)
 
 PLANET_TOF[('jupiter', 'jupiter')] = (4332., 9000.)
-PLANET_TOF[('jupiter', 'saturn')] = (800., 2500.)
+#PLANET_TOF[('jupiter', 'saturn')] = (800., 2500.)
+PLANET_TOF[('jupiter', '67p')] = (500., 3000.)
+
 
 
 for (p1, p2) in PLANET_TOF.keys():
     PLANET_TOF[(p2, p1)] = PLANET_TOF[(p1, p2)]
 
-PLANET_NAMES = ['venus', 'earth', 'mars', 'jupiter', 'saturn']
+chury = kep.planet(kep.epoch(2456879.5, kep.epoch.epoch_type.JD),
+                   (
+                       3.4630 * kep.AU, # a
+                       0.64102, # e
+                       7.0405 * kep.DEG2RAD, # i
+                       50.147 * kep.DEG2RAD, # W
+                       12.780 * kep.DEG2RAD, # w
+                       303.71 * kep.DEG2RAD # M
+                   ),
+                   kep.MU_SUN,
+                   1e-10, # mu_self
+                   5.e3, # radius
+                   100.e3, # save_radius
+                   '67p'
+)
+tools.PLANETS[chury.name] = chury
 
-T0 = (-900., -700.) # launch window
+for p in tools.PLANETS.values():
+    if not p.name is 'jupiter':
+        p.save_radius = 1.05
+
+    
+PLANET_NAMES = ['venus', 'earth', 'mars', 'jupiter', '67p'] #, 'jupiter', 'saturn']
+
+T0 = (1460., 1825.) #(5480., 5480.+365.25) # # launch window
 T_MIN = T0[0]
-T_MAX = T0[-1] + 6000.
+T_MAX = T0[-1] + 4000.
 
 def set_t_res(t_res):
     global T_RES
@@ -42,13 +70,13 @@ def set_t_res(t_res):
     T_RES = t_res
     T_SCALE = {name: np.arange(T_MIN, T_MAX, tools.PLANETS[name].period/kep.DAY2SEC/T_RES) for name in PLANET_NAMES}
 
-set_t_res(4)
+set_t_res(32)
 #print '\n'.join('time grid - %s: %d' % (name, len(T_SCALE[name])) for name in PLANET_NAMES)
 
-MAX_EPOCH = T_SCALE['saturn'][-2]
+MAX_EPOCH = T_SCALE['67p'][-2]
 MAX_FLYBYS = 5
-MAX_DV = 10000
-
+MAX_DV = 10000.
+MAX_DV_LAUNCH = 5000.
 MOVE_TYPE = tools.enum('T0', 'PLANET', 'TOF')
 MOVES = {
     MOVE_TYPE.T0: [t for t in T_SCALE['earth'] if t >= T0[0] and t <= T0[1]], 
@@ -59,7 +87,7 @@ MOVES = {
 
 def fix_first_move(fixit):
     if fixit:
-        MOVES[MOVE_TYPE.T0] = [min(T_SCALE['earth'], key=lambda x: abs(-787.526-x))]
+        MOVES[MOVE_TYPE.T0] = [min(T_SCALE['earth'], key=lambda x: abs(1550.-x))]
     else:
         MOVES[MOVE_TYPE.T0] = [t for t in T_SCALE['earth'] if t >= T0[0] and t <= T0[1]]
         
@@ -115,7 +143,7 @@ class State():
                                              rendezvous=self.isfinal())
 
             if len(self.tof) == 1:
-                dv = max(dv - 5000, 0)
+                dv = max(dv - MAX_DV_LAUNCH, 0)
             self.dv += dv
             self.vrel = vrel_out
             return
@@ -147,7 +175,7 @@ class State():
 
 
     def isfinal(self):
-        return self.seq[-1] == 'saturn' and len(self.seq) -1 == len(self.tof)
+        return self.seq[-1] == '67p' and len(self.seq) -1 == len(self.tof)
         
 
     def get_value():
@@ -180,17 +208,15 @@ class State():
 
         
 if __name__ == '__main__':
-    seq = ['earth', 'venus', 'venus', 'earth', 'jupiter', 'saturn']
-    #x = [-779.046753814506, 167.378952534645, 424.028254165204, 53.2897409769205, 589.766954923325, 2200] # best cassini 2 mga1dsm
-    #x = (-770.0110188351074, 180.01183909820912, 402.178253391855, 53.77017365886248, 587.8440519534922, 2199.9999164204687)
-    x = (-787.5263851540006, 197.5272067325506, 402.1782475135918, 53.77017708057876, 587.8440594214486, 2199.999972161545)
-
+    seq = ['earth', 'earth', 'mars', 'earth', 'earth', '67p']
     #print T_SCALE["saturn"]
     
     s = State()
     s.move(min(s.moves(), key=lambda move: abs(move-x[0]))) # t0
     for (p, tof) in zip(seq[1:], x[1:]):
         s.move(p)
+        print tof
+        print s.moves()
         s.move(min(s.moves(), key=lambda move: abs(move-tof)))
         #s.move(tof)
         print s
