@@ -5,7 +5,9 @@ import time
 
 #from pykep_search.state_eph_grid import State
 #from pykep_search.state_eph_grid import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
-from pykep_search.state_rosetta import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
+
+from pykep_search.state_cassini import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
+#from pykep_search.state_rosetta import State, MOVE_TYPE, MAX_DV, fix_first_move, set_t_res
 from pykep_search.tools import pretty_time
 
 def random_search(N=10000, verbose=False):
@@ -53,5 +55,5 @@ if __name__=='__main__':
     # define problem
     set_t_res(32)
     fix_first_move(False)
-    random_search(verbose=True)
+    random_search(N=50000, verbose=True)
 
