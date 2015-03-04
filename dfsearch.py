@@ -31,7 +31,7 @@ def df_search(state):
             LEGS += 1
 
         if LEGS % 100 == 0:
-            print '\r', LEGS,
+            print '\r', '{:,d}'.format(LEGS),
             sys.stdout.flush()
             
         ns.move(m)
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     for x in X:
         BEST = None
         set_t_res(x)
-        fix_first_move(False)
+        fix_first_move(True)
         state = State()    
         df_search(state)
         print '\r> ', x, LEGS
