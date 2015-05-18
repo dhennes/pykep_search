@@ -2,7 +2,7 @@ import numpy as np
 import PyKEP as kep
 
 
-PLANETS = {name: kep.planet_ss(name) for name in ['venus', 'earth', 'mars', 'jupiter', 'saturn']}
+PLANETS = {name: kep.planet.jpl_lp(name) for name in ['venus', 'earth', 'mars', 'jupiter', 'saturn']}
 
 
 def enum(*sequential, **named):
@@ -38,9 +38,9 @@ def lambert_leg(p1, p2, t0, tof, vrel=None, dv_launch=0., rendezvous=False):
     dV, vrel_out, where vrel_out is the relative velocity at the end of the leg at p2
     """
     # check if planets are names or planet objects
-    if not isinstance(p1, kep.planet):
+    if not isinstance(p1, kep.planet.jpl_lp):
         p1 = PLANETS[str(p1)]
-    if not isinstance(p2, kep.planet):
+    if not isinstance(p2, kep.planet.jpl_lp):
         p2 = PLANETS[str(p2)]
     r1, v1 = p1.eph(kep.epoch(t0))
     r2, v2 = p2.eph(kep.epoch(t0 + tof))

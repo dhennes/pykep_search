@@ -36,7 +36,7 @@ PLANET_TOF[('jupiter', '67p')] = (500., 3000.)
 for (p1, p2) in PLANET_TOF.keys():
     PLANET_TOF[(p2, p1)] = PLANET_TOF[(p1, p2)]
 
-chury = kep.planet(kep.epoch(2456879.5, kep.epoch.epoch_type.JD),
+chury = kep.planet.keplerian(kep.epoch(2456879.5, 'jd'),
                    (
                        3.4630 * kep.AU, # a
                        0.64102, # e
@@ -68,7 +68,7 @@ def set_t_res(t_res):
     global T_RES
     global T_SCALE
     T_RES = t_res
-    T_SCALE = {name: np.arange(T_MIN, T_MAX, tools.PLANETS[name].period/kep.DAY2SEC/T_RES) for name in PLANET_NAMES}
+    T_SCALE = {name: np.arange(T_MIN, T_MAX, tools.PLANETS[name].compute_period(kep.epoch(8000.)) * kep.SEC2DAY / T_RES) for name in PLANET_NAMES}
 
 set_t_res(32)
 #print '\n'.join('time grid - %s: %d' % (name, len(T_SCALE[name])) for name in PLANET_NAMES)
